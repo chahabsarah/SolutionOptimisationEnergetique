@@ -1,0 +1,143 @@
+/* About.css */
+.about-container {
+  font-family: 'Roboto', sans-serif;
+  color: #333;
+  padding: 20px;
+  line-height: 1.6;
+}
+
+.about-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.about-header h1 {
+  font-size: 2.5rem;
+  color: #636573;
+}
+
+.about-header h1 span {
+  color: white;
+}
+
+.about-header p {
+  font-size: 1.2rem;
+  color: black;
+}
+
+.about-features {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.about-features h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #636573;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.feature-card {
+  background: #f9f9f9;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px);
+}
+
+.feature-icon {
+  font-size: 3rem;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.about-team {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.about-team h2 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #636573;
+}
+
+.about-team p {
+  font-size: 1.1rem;
+  color: black;
+  padding: 0 20px;
+}
+
+.about-footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.9rem;
+  color: black;
+}
+/****************************************************************** */
+.about-why-choose, .about-testimonials, .about-contact {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  
+  .reasons-grid, .testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+  
+  .reason-card, .testimonial-card {
+    background: #f9f9f9;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+  }
+  
+  .reason-icon {
+    font-size: 2.5rem;
+    color: #466FA6;
+    margin-bottom: 10px;
+  }
+  
+  .contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .contact-form input, .contact-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+  }
+  
+  .submit-btn {
+    padding: 10px 20px;
+    background-color: #589A8D;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  
+  .submit-btn:hover {
+    background-color: #457a6c;
+  }
+  

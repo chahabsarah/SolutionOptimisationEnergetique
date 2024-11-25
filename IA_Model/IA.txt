@@ -1,0 +1,152 @@
+import pandas as pd
+import numpy as np
+import influxdb_client
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from flask import Flask, jsonify
+from flask_cors import CORS
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Configuration de la connexion à InfluxDB
+bucket = "master_32"
+token = "jyFqlziDXVA0kl7522EUM25GRwa55ImM8FunNg4BUbM65NpSQ7OmZUotaRBTu1J1cWKUm5E8WPLE2KkNeBmgGg=="
+org = "master"
+url = "http://192.168.43.196:8086"
+
+# Connexion à InfluxDB
+client = influxdb_client.InfluxDBClient(url=url, token=token, org=org)
+
+# Requête InfluxDB pour récupérer les données avec pivot
+query = '''
+from(bucket:"master_32")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == "master_32_sensors")
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+'''
+
+# Exécution de la requête et récupération des résultats
+results = client.query_api().query(query)
+
+# Extraction des données des FluxTables
+data_list = []
+for table in results:
+    for record in table.records:
+        data_list.append(record.values)
+
+# Création du DataFrame à partir des données extraites
+df = pd.DataFrame(data_list)
+
+# Supposons que les noms des colonnes souhaitées sont maintenant accessibles directement
+df_columns = ['power', 'voltage', 'current', 'energy', 'totalEnergy', 'frequency', 'pf', 'temperatureC', 'price']
+df = df[df_columns]
+
+# Nettoyage des données
+df = df.dropna(axis=1, how='all')  # Supprimer les colonnes avec toutes les valeurs NaN
+df = df.fillna(df.median())  # Remplacer NaN par la médiane de chaque colonne
+
+# Vérifiez les dimensions du DataFrame après nettoyage
+print(f'Number of rows after cleaning: {len(df)}')
+
+# Séparation des caractéristiques (features) et de la cible (target)
+X = df.drop(columns=['energy'])
+y = df['energy']
+
+# Division des données en ensembles d'entraînement et de test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Normalisation des caractéristiques
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Création du modèle de régression
+model = Sequential()
+model.add(Dense(64, input_dim=X_train.shape[1], activation='relu'))
+model.add(Dense(32, activation='relu'))
+model.add(Dense(16, activation='relu'))
+model.add(Dense(1, activation='linear'))
+
+# Compilation du modèle
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+# Entraînement du modèle
+history = model.fit(X_train, y_train, epochs=50, batch_size=32, validation_split=0.2)
+
+# Évaluation du modèle
+loss = model.evaluate(X_test, y_test)
+print(f'Loss: {loss}')
+
+# Prédiction sur le test set
+predictions = model.predict(X_test)
+
+# Affichage de quelques prédictions et valeurs réelles
+for i in range(min(10, len(predictions))):
+    print(f'Prédit: {predictions[i][0]}, Réel: {y_test.iloc[i]}')
+
+# Sauvegarde du modèle entraîné
+model.save('energy_prediction_model.h5')
+
+# Détection des inefficacités énergétiques
+def detect_inefficiencies(data):
+    inefficiencies = []
+    for index, row in data.iterrows():
+        if row['pf'] < 0.9:  # Exemple de règle: facteur de puissance inférieur à 0.9
+            inefficiencies.append(f"Low power factor detected at {index}")
+        if row['voltage'] < 210 or row['voltage'] > 240:  # Exemple de règle: voltage hors des limites
+            inefficiencies.append(f"Voltage anomaly detected at {index}")
+    return inefficiencies
+
+# Génération des recommandations d'optimisation
+def generate_recommendations(predictions):
+    recommendations = []
+    for prediction in predictions:
+        if prediction > np.mean(predictions):  # Exemple de règle: consommation supérieure à la moyenne
+            recommendations.append("Consider reducing power consumption during peak hours.")
+        else:
+            recommendations.append("Current consumption is within optimal range.")
+    return recommendations
+
+# Fonction pour envoyer des alertes par email
+def send_email_alert(subject, body):
+    sender_email = "tektaitheoriginals@gmail.com"
+    receiver_email = "chahabsarah@gmail.com"
+    password = "xcib krcl izwf tvwf"
+    
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+
+    message.attach(MIMEText(body, "plain"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message.as_string())
+    print("E-mail sent successfully")
+
+# Détection des inefficacités
+inefficiencies = detect_inefficiencies(df)
+print("Inefficiencies detected:", inefficiencies)
+
+# Envoi d'une seule alerte pour toutes les inefficacités détectées
+if inefficiencies:
+    send_email_alert("Energy Inefficiencies Detected", "Des inefficacités énergétiques ont été détectées.")
+
+# Intégration avec l'application web Energy Flow (exemple d'API)
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow CORS for your React.js app's origin
+
+@app.route('/inefficiencies', methods=['GET'])
+def get_inefficiencies():
+    return jsonify(inefficiencies)
+
+@app.route('/recommendations', methods=['GET'])
+def get_recommendations():
+    return jsonify(generate_recommendations(predictions))
+
+if __name__ == '__main__':
+    app.run(debug=True, use_reloader=False)
